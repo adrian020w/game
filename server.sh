@@ -6,6 +6,7 @@ trap ctrl_c INT
 ctrl_c() {
   echo -e "\n[!] Dihentikan."
   pkill -f node >/dev/null 2>&1
+  pkill -f "ssh -R 80:localhost:$PORT serveo.net" >/dev/null 2>&1
   exit 0
 }
 
@@ -30,5 +31,9 @@ if [ ! -d "node_modules" ]; then
   npm install express socket.io >/dev/null 2>&1
 fi
 
-echo "[*] Menjalankan server..."
-node $ENTRY
+echo "[*] Menjalankan server Node.js di background..."
+node $ENTRY &
+
+sleep 3
+echo "🌐 Membuka akses publik via Serveo..."
+ssh -o StrictHostKeyChecking=no -R 80:localhost:$PORT serveo.net
