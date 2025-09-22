@@ -1,69 +1,63 @@
 const socket = io();
 
-const config = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  physics: { default: 'arcade' },
-  scene: { preload, create, update }
-};
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-let cursors, players = {};
+let playerId;
+let players = {};
+let ball = { x: 400, y: 250 };
 
-const game = new Phaser.Game(config);
+const heroImg = new Image();
+heroImg.src = "/assets/hero1.png";
 
-function preload() {
-  this.load.image("map", "assets/map.png");
-  this.load.image("hero_red", "assets/hero_red.png");
-  this.load.image("hero_blue", "assets/hero_blue.png");
-  this.load.image("hero_green", "assets/hero_green.png");
-}
+const ballImg = new Image();
+ballImg.src = "/assets/ball.png";
 
-function create() {
-  this.add.image(400, 300, "map"); // background map
-  cursors = this.input.keyboard.createCursorKeys();
+socket.on("init", (data) => {
+  playerId = data.id;
+  players = data.players;
+  ball = data.ball;
+});
 
-  socket.on("currentPlayers", (serverPlayers) => {
-    Object.keys(serverPlayers).forEach((id) => {
-      addPlayer(this, serverPlayers[id]);
-    });
-  });
+socket.on("newPlayer", (data) => {
+  players[data.id] = data.pos;
+});
 
-  socket.on("newPlayer", (playerInfo) => {
-    addPlayer(this, playerInfo);
-  });
+socket.on("update", (data) => {
+  players[data.id] = data.pos;
+});
 
-  socket.on("playerMoved", (playerInfo) => {
-    const sprite = players[playerInfo.playerId];
-    if (sprite) {
-      sprite.setPosition(playerInfo.x, playerInfo.y);
-    }
-  });
+socket.on("removePlayer", (id) => {
+  delete players[id];
+});
 
-  socket.on("disconnectPlayer", (id) => {
-    if (players[id]) {
-      players[id].destroy();
-      delete players[id];
-    }
-  });
-}
+socket.on("ballUpdate", (b) => {
+  ball = b;
+});
 
-function update() {
-  const player = players[socket.id];
-  if (player) {
-    let moved = false;
-    if (cursors.left.isDown) { player.x -= 2; moved = true; }
-    if (cursors.right.isDown) { player.x += 2; moved = true; }
-    if (cursors.up.isDown) { player.y -= 2; moved = true; }
-    if (cursors.down.isDown) { player.y += 2; moved = true; }
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (moved) {
-      socket.emit("playerMovement", { x: player.x, y: player.y });
-    }
+  // gambar pemain
+  for (let id in players) {
+    let p = players[id];
+    ctx.drawImage(heroImg, p.x, p.y, 40, 40);
   }
-}
 
-function addPlayer(scene, playerInfo) {
-  const key = playerInfo.texture;
-  players[playerInfo.playerId] = scene.add.image(playerInfo.x, playerInfo.y, key);
+  // gambar bola
+  ctx.drawImage(ballImg, ball.x, ball.y, 30, 30);
+
+  requestAnimationFrame(draw);
 }
+draw();
+
+// kontrol keyboard
+document.addEventListener("keydown", (e) => {
+  if (!players[playerId]) return;
+  let speed = 10;
+  if (e.key === "ArrowUp") players[playerId].y -= speed;
+  if (e.key === "ArrowDown") players[playerId].y += speed;
+  if (e.key === "ArrowLeft") players[playerId].x -= speed;
+  if (e.key === "ArrowRight") players[playerId].x += speed;
+  socket.emit("move", players[playerId]);
+});

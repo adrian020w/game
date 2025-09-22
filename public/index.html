@@ -1,18 +1,13 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="utf-8">
-  <title>Mini MOBA (Demo)</title>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body { margin:0; background:#111; color:white; font-family:sans-serif; text-align:center; }
-    canvas { margin:auto; display:block; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Mini MOBA Adrian</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>Mini MOBA (Prototype)</h2>
-  <p>Gunakan tombol panah untuk bergerak. Buka dari HP/PC lain untuk multiplayer.</p>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
