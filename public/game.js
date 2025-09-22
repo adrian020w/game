@@ -29,10 +29,10 @@ heroList.forEach(h => {
 
 // state tombol (keyboard + touch)
 const keysPressed = { up:false, down:false, left:false, right:false };
-
 const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
-const moveSpeed = 5;
+const moveSpeed = 3; // lebih lambat untuk smooth
+let lastTime = Date.now();
 
 // --- tombol HP (div #up, #down, #left, #right) ---
 ["up","down","left","right"].forEach(dir => {
@@ -48,12 +48,9 @@ const moveSpeed = 5;
     keysPressed[dir] = false;
   };
 
-  // touch untuk HP
   btn.addEventListener("touchstart", startPress);
   btn.addEventListener("touchend", endPress);
   btn.addEventListener("touchcancel", endPress);
-
-  // mouse untuk desktop
   btn.addEventListener("mousedown", startPress);
   btn.addEventListener("mouseup", endPress);
   btn.addEventListener("mouseleave", endPress);
@@ -120,10 +117,14 @@ canvas.addEventListener("touchmove", (e) => {
 function updatePlayer() {
   if (!players[playerId]) return;
 
-  if (keysPressed.up) players[playerId].y -= moveSpeed;
-  if (keysPressed.down) players[playerId].y += moveSpeed;
-  if (keysPressed.left) players[playerId].x -= moveSpeed;
-  if (keysPressed.right) players[playerId].x += moveSpeed;
+  const now = Date.now();
+  const dt = (now - lastTime) / 16; // skala 60fps
+  lastTime = now;
+
+  if (keysPressed.up) players[playerId].y -= moveSpeed * dt;
+  if (keysPressed.down) players[playerId].y += moveSpeed * dt;
+  if (keysPressed.left) players[playerId].x -= moveSpeed * dt;
+  if (keysPressed.right) players[playerId].x += moveSpeed * dt;
 
   // batas canvas
   players[playerId].x = Math.max(0, Math.min(canvasWidth-40, players[playerId].x));
@@ -132,7 +133,7 @@ function updatePlayer() {
   socket.emit("move", players[playerId]);
 }
 
-// main draw loop
+// main draw loop dengan interpolasi untuk smooth visual
 function draw() {
   updatePlayer();
 
@@ -143,9 +144,16 @@ function draw() {
 
   // semua pemain
   for (let id in players) {
-    const p = players[id];
-    const img = heroImages[p.skin] || myHero;
-    ctx.drawImage(img, p.x, p.y, 40, 40);
+    let p = players[id];
+    let img = heroImages[p.skin] || myHero;
+
+    // interpolasi posisi render
+    if (!p.renderX) p.renderX = p.x;
+    if (!p.renderY) p.renderY = p.y;
+    p.renderX += (p.x - p.renderX) * 0.3;
+    p.renderY += (p.y - p.renderY) * 0.3;
+
+    ctx.drawImage(img, p.renderX, p.renderY, 40, 40);
   }
 
   // bola

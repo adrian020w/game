@@ -1,47 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Mini MOBA Soccer</title>
-  <style>
-    body { margin:0; background:#333; text-align:center; }
-    canvas { background:#0b6623; display:block; margin:auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini MOBA Soccer</title>
+<style>
+  body {
+    margin: 0;
+    background: #333;
+    text-align: center;
+    overflow: hidden; /* cegah scroll di mobile */
+  }
 
-    #controls {
-      position: fixed;
-      bottom: 20px;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      z-index: 1000; /* pastikan tombol di atas canvas */
-    }
+  canvas {
+    background: #0b6623;
+    display: block;
+    margin: auto;
+    touch-action: none; /* cegah zoom/pan default di mobile */
+  }
 
+  #controls {
+    position: fixed;
+    bottom: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    z-index: 1000;
+    pointer-events: none; /* agar tidak menghalangi canvas swipe, nanti tombol aktif sendiri */
+  }
+
+  .btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 3px solid white;
+    color: white;
+    font-size: 32px;
+    line-height: 80px;
+    text-align: center;
+    user-select: none;
+    pointer-events: auto; /* tombol tetap bisa disentuh */
+  }
+
+  /* optional: responsive untuk layar kecil */
+  @media (max-width: 500px) {
     .btn {
       width: 60px;
       height: 60px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      border: 2px solid white;
-      color: white;
       font-size: 24px;
       line-height: 60px;
-      text-align: center;
-      user-select: none;
     }
-  </style>
+  }
+</style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="500"></canvas>
 
-  <div id="controls">
-    <div class="btn" id="left">⬅</div>
-    <div class="btn" id="up">⬆</div>
-    <div class="btn" id="down">⬇</div>
-    <div class="btn" id="right">➡</div>
-  </div>
+<canvas id="gameCanvas" width="800" height="500"></canvas>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="game.js"></script>
+<div id="controls">
+  <div class="btn" id="left">⬅</div>
+  <div class="btn" id="up">⬆</div>
+  <div class="btn" id="down">⬇</div>
+  <div class="btn" id="right">➡</div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+
 </body>
 </html>
