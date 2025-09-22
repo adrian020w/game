@@ -1,11 +1,9 @@
-// server/index.js
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+
+const PORT = process.env.PORT || 3333;
 
 app.use(express.static("public"));
 
@@ -14,27 +12,30 @@ let players = {};
 io.on("connection", (socket) => {
   console.log("Player connected:", socket.id);
 
-  // default spawn position random sedikit supaya tidak tumpuk selalu
-  players[socket.id] = { x: 100 + Math.floor(Math.random()*200), y: 100 + Math.floor(Math.random()*200) };
+  // pilih hero random
+  const textures = ["hero_red", "hero_blue", "hero_green"];
+  const texture = textures[Math.floor(Math.random() * textures.length)];
+
+  players[socket.id] = { playerId: socket.id, x: 100 + Math.random()*600, y: 100 + Math.random()*400, texture };
 
   socket.emit("currentPlayers", players);
-  socket.broadcast.emit("newPlayer", { id: socket.id, ...players[socket.id] });
+  socket.broadcast.emit("newPlayer", players[socket.id]);
 
-  socket.on("move", (data) => {
+  socket.on("playerMovement", (movement) => {
     if (players[socket.id]) {
-      // simple server-side clamp
-      players[socket.id].x = Math.max(0, Math.min(800, Math.round(data.x)));
-      players[socket.id].y = Math.max(0, Math.min(600, Math.round(data.y)));
-      io.emit("playerMoved", { id: socket.id, ...players[socket.id] });
+      players[socket.id].x = movement.x;
+      players[socket.id].y = movement.y;
+      io.emit("playerMoved", players[socket.id]);
     }
   });
 
   socket.on("disconnect", () => {
     console.log("Player disconnected:", socket.id);
     delete players[socket.id];
-    io.emit("removePlayer", socket.id);
+    io.emit("disconnectPlayer", socket.id);
   });
 });
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3333;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+http.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
