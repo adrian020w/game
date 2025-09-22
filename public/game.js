@@ -34,6 +34,32 @@ const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
 const moveSpeed = 5;
 
+// --- tombol HP (div #up, #down, #left, #right) ---
+["up","down","left","right"].forEach(dir => {
+  const btn = document.getElementById(dir);
+
+  const startPress = (e) => {
+    e.preventDefault(); // cegah scroll layar
+    keysPressed[dir] = true;
+  };
+
+  const endPress = (e) => {
+    e.preventDefault();
+    keysPressed[dir] = false;
+  };
+
+  // touch untuk HP
+  btn.addEventListener("touchstart", startPress);
+  btn.addEventListener("touchend", endPress);
+  btn.addEventListener("touchcancel", endPress);
+
+  // mouse untuk desktop
+  btn.addEventListener("mousedown", startPress);
+  btn.addEventListener("mouseup", endPress);
+  btn.addEventListener("mouseleave", endPress);
+});
+
+// socket events
 socket.on("init", (data) => {
   playerId = data.id;
   players = data.players;
@@ -50,7 +76,7 @@ socket.on("update", (data) => { players[data.id] = data.pos; });
 socket.on("removePlayer", (id) => { delete players[id]; });
 socket.on("ballUpdate", (b) => { ball = b; });
 
-// kontrol keyboard
+// keyboard control
 document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowUp") keysPressed.up = true;
   if (e.key === "ArrowDown") keysPressed.down = true;
@@ -64,7 +90,7 @@ document.addEventListener("keyup", (e) => {
   if (e.key === "ArrowRight") keysPressed.right = false;
 });
 
-// kontrol touch HP (swipe/drag)
+// touch swipe control
 let touchStartX = null, touchStartY = null;
 canvas.addEventListener("touchstart", (e) => {
   const t = e.touches[0];
@@ -90,7 +116,7 @@ canvas.addEventListener("touchmove", (e) => {
   socket.emit("move", players[playerId]);
 });
 
-// update posisi player tiap frame (tahan tombol)
+// update posisi player tiap frame (keyboard/tombol HP)
 function updatePlayer() {
   if (!players[playerId]) return;
 
@@ -106,7 +132,7 @@ function updatePlayer() {
   socket.emit("move", players[playerId]);
 }
 
-// gambar loop
+// main draw loop
 function draw() {
   updatePlayer();
 
@@ -115,10 +141,10 @@ function draw() {
   // lapangan
   ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
 
-  // pemain
+  // semua pemain
   for (let id in players) {
-    let p = players[id];
-    let img = heroImages[p.skin] || myHero;
+    const p = players[id];
+    const img = heroImages[p.skin] || myHero;
     ctx.drawImage(img, p.x, p.y, 40, 40);
   }
 
