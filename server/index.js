@@ -1,118 +1,63 @@
-const socket = io();
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-let playerId;
+app.use(express.static("public"));
+
 let players = {};
-let ball = { x: 400, y: 250 };
-let playerPos = { x: 100, y: 100 };
+let ball = { x: 400, y: 250, vx: 0, vy: 0 };
 
 const canvasWidth = 800;
 const canvasHeight = 500;
-const moveSpeed = 5;
 
-// state tombol
-const keysPressed = {
-  up: false,
-  down: false,
-  left: false,
-  right: false
-};
-
-// init dari server
-socket.on("init", (data) => {
-  playerId = data.id;
-  players = data.players;
-  ball = data.ball;
-  playerPos = players[playerId];
-  requestAnimationFrame(gameLoop);
-});
-
-socket.on("newPlayer", (data) => {
-  players[data.id] = data.pos;
-});
-
-socket.on("update", (data) => {
-  players[data.id] = data.pos;
-});
-
-socket.on("removePlayer", (id) => {
-  delete players[id];
-});
-
-socket.on("ballUpdate", (b) => {
-  ball = b;
-});
-
-// tombol kontrol HP / desktop
-const buttons = ["up","down","left","right"];
-buttons.forEach(dir => {
-  const el = document.getElementById(dir);
-
-  const pressStart = (e) => { e.preventDefault(); keysPressed[dir] = true; };
-  const pressEnd = (e) => { e.preventDefault(); keysPressed[dir] = false; };
-
-  // HP
-  el.addEventListener("touchstart", pressStart);
-  el.addEventListener("touchend", pressEnd);
-  el.addEventListener("touchcancel", pressEnd);
-
-  // Desktop
-  el.addEventListener("mousedown", pressStart);
-  el.addEventListener("mouseup", pressEnd);
-  el.addEventListener("mouseleave", pressEnd);
-});
-
-// keyboard support
-document.addEventListener("keydown", (e) => {
-  if(e.key==="ArrowUp") keysPressed.up = true;
-  if(e.key==="ArrowDown") keysPressed.down = true;
-  if(e.key==="ArrowLeft") keysPressed.left = true;
-  if(e.key==="ArrowRight") keysPressed.right = true;
-});
-
-document.addEventListener("keyup", (e) => {
-  if(e.key==="ArrowUp") keysPressed.up = false;
-  if(e.key==="ArrowDown") keysPressed.down = false;
-  if(e.key==="ArrowLeft") keysPressed.left = false;
-  if(e.key==="ArrowRight") keysPressed.right = false;
-});
-
-// update posisi player tiap frame
-function updatePlayer() {
-  if(keysPressed.up) playerPos.y -= moveSpeed;
-  if(keysPressed.down) playerPos.y += moveSpeed;
-  if(keysPressed.left) playerPos.x -= moveSpeed;
-  if(keysPressed.right) playerPos.x += moveSpeed;
-
-  // batas canvas
-  playerPos.x = Math.max(0, Math.min(canvasWidth, playerPos.x));
-  playerPos.y = Math.max(0, Math.min(canvasHeight, playerPos.y));
-
-  socket.emit("move", playerPos);
+function distance(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-// loop gambar
-function gameLoop() {
-  updatePlayer();
+io.on("connection", (socket) => {
+  console.log("Player connected:", socket.id);
+  players[socket.id] = { x: 100, y: 100, skin: "hero1.png" };
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  socket.emit("init", { id: socket.id, players, ball });
+  socket.broadcast.emit("newPlayer", { id: socket.id, pos: players[socket.id] });
 
-  // gambar bola
-  ctx.fillStyle = "yellow";
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, 20, 0, Math.PI*2);
-  ctx.fill();
+  socket.on("move", (pos) => {
+    pos.x = Math.max(0, Math.min(canvasWidth, pos.x));
+    pos.y = Math.max(0, Math.min(canvasHeight, pos.y));
+    players[socket.id] = pos;
 
-  // gambar players
-  for(let id in players){
-    const p = players[id];
-    ctx.fillStyle = id === playerId ? "blue" : "red";
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 20, 0, Math.PI*2);
-    ctx.fill();
-  }
+    let dist = distance(pos, ball);
+    if (dist < 40) {
+      let dx = ball.x - pos.x;
+      let dy = ball.y - pos.y;
+      let len = Math.sqrt(dx*dx + dy*dy) || 1;
+      ball.vx = (dx / len) * 5;
+      ball.vy = (dy / len) * 5;
+    }
 
-  requestAnimationFrame(gameLoop);
-}
+    io.emit("update", { id: socket.id, pos });
+  });
+
+  socket.on("disconnect", () => {
+    delete players[socket.id];
+    io.emit("removePlayer", socket.id);
+  });
+});
+
+setInterval(() => {
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+  ball.x = Math.max(0, Math.min(canvasWidth, ball.x));
+  ball.y = Math.max(0, Math.min(canvasHeight, ball.y));
+  ball.vx *= 0.95;
+  ball.vy *= 0.95;
+  io.emit("ballUpdate", ball);
+}, 50);
+
+server.listen(3333, () => {
+  console.log("Server running on http://localhost:3333");
+});
