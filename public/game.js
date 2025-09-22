@@ -33,13 +33,14 @@ const canvasWidth = canvas.width;
 const canvasHeight = canvas.height;
 const moveSpeed = 3; // lebih lambat untuk smooth
 let lastTime = Date.now();
+let lastSend = 0;
 
-// --- tombol HP (div #up, #down, #left, #right) ---
+// --- tombol HP ---
 ["up","down","left","right"].forEach(dir => {
   const btn = document.getElementById(dir);
 
   const startPress = (e) => {
-    e.preventDefault(); // cegah scroll layar
+    e.preventDefault();
     keysPressed[dir] = true;
   };
 
@@ -110,7 +111,12 @@ canvas.addEventListener("touchmove", (e) => {
   touchStartX = t.clientX;
   touchStartY = t.clientY;
 
-  socket.emit("move", players[playerId]);
+  // kirim posisi ke server dibatasi
+  const now = Date.now();
+  if (now - lastSend > 50) {
+    socket.emit("move", players[playerId]);
+    lastSend = now;
+  }
 });
 
 // update posisi player tiap frame (keyboard/tombol HP)
@@ -118,7 +124,7 @@ function updatePlayer() {
   if (!players[playerId]) return;
 
   const now = Date.now();
-  const dt = (now - lastTime) / 16; // skala 60fps
+  const dt = (now - lastTime) / 16;
   lastTime = now;
 
   if (keysPressed.up) players[playerId].y -= moveSpeed * dt;
@@ -130,10 +136,14 @@ function updatePlayer() {
   players[playerId].x = Math.max(0, Math.min(canvasWidth-40, players[playerId].x));
   players[playerId].y = Math.max(0, Math.min(canvasHeight-40, players[playerId].y));
 
-  socket.emit("move", players[playerId]);
+  // kirim posisi ke server dibatasi 20x per detik
+  if (now - lastSend > 50) {
+    socket.emit("move", players[playerId]);
+    lastSend = now;
+  }
 }
 
-// main draw loop dengan interpolasi untuk smooth visual
+// main draw loop dengan interpolasi
 function draw() {
   updatePlayer();
 
@@ -147,11 +157,12 @@ function draw() {
     let p = players[id];
     let img = heroImages[p.skin] || myHero;
 
-    // interpolasi posisi render
     if (!p.renderX) p.renderX = p.x;
     if (!p.renderY) p.renderY = p.y;
-    p.renderX += (p.x - p.renderX) * 0.3;
-    p.renderY += (p.y - p.renderY) * 0.3;
+
+    // interpolasi posisi
+    p.renderX += (p.x - p.renderX) * 0.2;
+    p.renderY += (p.y - p.renderY) * 0.2;
 
     ctx.drawImage(img, p.renderX, p.renderY, 40, 40);
   }
