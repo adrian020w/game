@@ -7,31 +7,25 @@ let playerId;
 let players = {};
 let ball = { x: 400, y: 250 };
 
-// === Asset gambar ===
-const heroImgs = {
-  green: new Image(),
-  red: new Image(),
-  blue: new Image(),
-  yellow: new Image(),
-};
-heroImgs.green.src = "/assets/hero_green.png";
-heroImgs.red.src = "/assets/hero_red.png";
-heroImgs.blue.src = "/assets/hero_blue.png";
-heroImgs.yellow.src = "/assets/hero_yellow.png";
+// assets
+const fieldImg = new Image();
+fieldImg.src = "/assets/field.png";
 
 const ballImg = new Image();
 ballImg.src = "/assets/ball.png";
 
-const fieldImg = new Image();
-fieldImg.src = "/assets/field.png";
+// pilih hero random saat connect
+const heroList = ["hero1.png", "hero2.png"];
+const myHero = new Image();
+myHero.src = "/assets/" + heroList[Math.floor(Math.random() * heroList.length)];
 
-const goalLeftImg = new Image();
-goalLeftImg.src = "/assets/goal_left.png";
+const heroImages = {};
+heroList.forEach(h => {
+  const img = new Image();
+  img.src = "/assets/" + h;
+  heroImages[h] = img;
+});
 
-const goalRightImg = new Image();
-goalRightImg.src = "/assets/goal_right.png";
-
-// === Socket events ===
 socket.on("init", (data) => {
   playerId = data.id;
   players = data.players;
@@ -54,32 +48,27 @@ socket.on("ballUpdate", (b) => {
   ball = b;
 });
 
-// === Draw Loop ===
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // gambar lapangan
   ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
 
-  // gambar gawang kiri & kanan
-  ctx.drawImage(goalLeftImg, 0, canvas.height / 2 - 50, 40, 100);
-  ctx.drawImage(goalRightImg, canvas.width - 40, canvas.height / 2 - 50, 40, 100);
-
-  // gambar bola
-  ctx.drawImage(ballImg, ball.x, ball.y, 30, 30);
-
   // gambar pemain
   for (let id in players) {
     let p = players[id];
-    let heroImg = heroImgs[p.color] || heroImgs.green; // default hijau
-    ctx.drawImage(heroImg, p.x, p.y, 40, 40);
+    let img = heroImages[p.skin] || myHero;
+    ctx.drawImage(img, p.x, p.y, 40, 40);
   }
+
+  // gambar bola
+  ctx.drawImage(ballImg, ball.x, ball.y, 30, 30);
 
   requestAnimationFrame(draw);
 }
 draw();
 
-// === Kontrol Keyboard ===
+// kontrol keyboard
 document.addEventListener("keydown", (e) => {
   if (!players[playerId]) return;
   let speed = 10;
