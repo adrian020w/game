@@ -16,8 +16,9 @@ ballImg.src = "/assets/ball.png";
 
 // pilih hero random saat connect
 const heroList = ["hero1.png", "hero2.png"];
+const mySkin = heroList[Math.floor(Math.random() * heroList.length)];
 const myHero = new Image();
-myHero.src = "/assets/" + heroList[Math.floor(Math.random() * heroList.length)];
+myHero.src = "/assets/" + mySkin;
 
 const heroImages = {};
 heroList.forEach(h => {
@@ -30,6 +31,12 @@ socket.on("init", (data) => {
   playerId = data.id;
   players = data.players;
   ball = data.ball;
+
+  // kasih skin ke server biar semua player tau
+  if (players[playerId]) {
+    players[playerId].skin = mySkin;
+    socket.emit("move", players[playerId]);
+  }
 });
 
 socket.on("newPlayer", (data) => {
@@ -76,5 +83,29 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowDown") players[playerId].y += speed;
   if (e.key === "ArrowLeft") players[playerId].x -= speed;
   if (e.key === "ArrowRight") players[playerId].x += speed;
+  socket.emit("move", players[playerId]);
+});
+
+// kontrol sentuh (HP)
+let touchStartX = null, touchStartY = null;
+canvas.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+});
+
+canvas.addEventListener("touchmove", (e) => {
+  if (!players[playerId]) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  let speed = 5;
+
+  players[playerId].x += dx / 20 * speed;
+  players[playerId].y += dy / 20 * speed;
+
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+
   socket.emit("move", players[playerId]);
 });
